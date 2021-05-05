@@ -1,6 +1,9 @@
 import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
+import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.response.SendResponse;
 
 import java.util.*;
 import java.util.concurrent.Semaphore;
@@ -17,6 +20,7 @@ public class MQTTServer {
     private List<Pair<Topic, String>> alerts;
     private Semaphore[] subscrAndAlerts;
     private MongoConnection db;
+    private TelegramBot bot;
 
 
     public MQTTServer(String identifier, String host, MongoConnection db) {
@@ -26,6 +30,7 @@ public class MQTTServer {
         this.alerts = new LinkedList<>();
         this.subscrAndAlerts = new Semaphore[]{new Semaphore(0), new Semaphore(0)};
         this.db = db;
+        this.bot = new TelegramBot("1794376012:AAFqfMrJD-axHouu8feNxbaixDgP9i4M7LI");
     }
 
     private Mqtt5BlockingClient createClient(String host) {
@@ -57,7 +62,7 @@ public class MQTTServer {
             String payload = UTF_8.decode(publish.getPayload().orElseThrow()).toString();
             System.out.println("Received message: " + topic + " -> " + payload);
             if (!topic.contains("comunication")) {
-                topicPayload.add(new Pair<>(topic.replaceFirst("customer/",""), payload));
+                topicPayload.add(new Pair<>(topic.replaceFirst("customer/", ""), payload));
                 subscrAndAlerts[0].release(1);
             }
         });
@@ -88,14 +93,19 @@ public class MQTTServer {
         return new Thread(r);
     }
 
+
     private Thread sendAlerts() {
         Runnable r = () -> {
             while (true) {
                 try {
                     subscrAndAlerts[1].acquire(1);
-                    Pair<Topic, String> topic_mess= alerts.remove(0);
-                    db.insertAlertWithTimeControl(topic_mess.getKey(), topic_mess.getValue());
-                    System.out.println(topic_mess);
+                    Pair<Topic, String> topic_mess = alerts.remove(0);
+                    DBOperation ris = db.insertAlertWithTimeControl(topic_mess.getKey(), topic_mess.getValue(), 1);
+                    if (ris != DBOperation.VOID) {
+                        Customer customerToAlert = db.getCustomerById(topic_mess.getKey().getCustomer().getCustomerID());
+                        sendMessageToChat(customerToAlert.getChatID(), topic_mess.getValue());
+                        System.out.println(topic_mess);
+                    }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -104,10 +114,17 @@ public class MQTTServer {
         return new Thread(r);
     }
 
+    private void sendMessageToChat(int chatID, String message) {
+        // Create your bot passing the token received from @BotFather
+
+        int id = -549095250;
+        SendResponse response = bot.execute(new SendMessage(chatID, message));
+    }
+
     private void threshControlQueueInsertion(Topic t, Map<String, Number> field_val, Comparator<Number> comp) {
         var sampleValue = field_val.get("temp");
         if (comp.compare(sampleValue, t.getTrigger()) > 0) {
-            String mess = "ATTENTION: topic %s with value: %.2f exceeds the threshold: %.2f".formatted(t.getName(),
+            String mess = "ATTENTION: Topic %s with value: %.2f exceeds the threshold: %.2f".formatted(t.getName(),
                     sampleValue.doubleValue(), t.getTrigger().doubleValue());
             alerts.add(new Pair<>(t, mess));
             subscrAndAlerts[1].release(1);

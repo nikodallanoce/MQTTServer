@@ -1,5 +1,6 @@
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
@@ -64,8 +65,8 @@ public class MongoConnection {
     }
 
 
-    public void insertAlertWithTimeControl(Topic t, String message) {
-        int offsetMin = 1;
+    public DBOperation insertAlertWithTimeControl(Topic t, String message, int offsetMin) {
+        DBOperation dbOp = DBOperation.VOID;
         var alerts = db.getCollection("Alerts");
         var filter = new Document("topicID", new Document("$eq", t.getTopicID()));
         if (alerts.countDocuments(filter) == 0) {
@@ -74,19 +75,22 @@ public class MongoConnection {
                     .append("topicID", t.getTopicID())
                     .append("message", Collections.singletonList(messArray));
             alerts.insertOne(d);
+            dbOp = DBOperation.INSERT;
         } else {
-            var ris = alerts.find(filter);
-            ris.forEach(doc -> {
+            FindIterable<Document> ris = alerts.find(filter);
+            for (var doc : ris) {
                 List<Document> alert = (ArrayList<Document>) doc.get("message");
                 Date la = (Date) alert.get(alert.size() - 1).get("dateTime");
                 LocalDateTime lastAlert = LocalDateTime.ofInstant(la.toInstant(), ZoneOffset.of("Z"));
                 if (lastAlert.plusMinutes(offsetMin).isBefore(LocalDateTime.now())) {
                     Bson update = push("message", new Document().append("text", message).append("dateTime", LocalDateTime.now()));
                     alerts.updateOne(eq("topicID", t.getTopicID()), update);
+                    dbOp = DBOperation.UPDATE;
                 }
                 System.out.println();
-            });
+            }
         }
+        return dbOp;
     }
 
     public List<Topic> getTopics() {
