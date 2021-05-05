@@ -40,7 +40,7 @@ public class MongoConnection {
         this.db = mongoClient.getDatabase(database);
     }
 
-    public DBOperation insertRecordWithControls(ObjectId topicID, Map<String, Number> field_val) {
+    public DBOperation insertRecordWithControls(ObjectId topicID, Map<String, Number> field_val){
         var today = LocalDate.now();
         var now = LocalTime.now().toEpochSecond(today, ZoneOffset.of("Z"));
         Document tempDoc = new Document().append("val", field_val.get("temp")).append("time", new BsonTimestamp(now));

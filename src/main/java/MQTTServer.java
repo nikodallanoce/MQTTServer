@@ -116,8 +116,6 @@ public class MQTTServer {
 
     private void sendMessageToChat(int chatID, String message) {
         // Create your bot passing the token received from @BotFather
-
-        int id = -549095250;
         SendResponse response = bot.execute(new SendMessage(chatID, message));
     }
 
