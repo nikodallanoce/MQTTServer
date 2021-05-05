@@ -14,7 +14,7 @@ public class MQTTServer {
     private final String identifier;
     private final Mqtt5BlockingClient client;
     private List<Pair<String, String>> topicPayload;
-    private List<Pair<String, Integer>> alerts;
+    private List<Pair<Topic, String>> alerts;
     private Semaphore[] subscrAndAlerts;
     private MongoConnection db;
 
@@ -57,7 +57,7 @@ public class MQTTServer {
             String payload = UTF_8.decode(publish.getPayload().orElseThrow()).toString();
             System.out.println("Received message: " + topic + " -> " + payload);
             if (!topic.contains("comunication")) {
-                topicPayload.add(new Pair<>(topic, payload));
+                topicPayload.add(new Pair<>(topic.replaceFirst("customer/",""), payload));
                 subscrAndAlerts[0].release(1);
             }
         });
@@ -93,7 +93,9 @@ public class MQTTServer {
             while (true) {
                 try {
                     subscrAndAlerts[1].acquire(1);
-                    System.out.println(alerts.remove(0).getKey());
+                    Pair<Topic, String> topic_mess= alerts.remove(0);
+                    db.insertAlertWithTimeControl(topic_mess.getKey(), topic_mess.getValue());
+                    System.out.println(topic_mess);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -107,7 +109,7 @@ public class MQTTServer {
         if (comp.compare(sampleValue, t.getTrigger()) > 0) {
             String mess = "ATTENTION: topic %s with value: %.2f exceeds the threshold: %.2f".formatted(t.getName(),
                     sampleValue.doubleValue(), t.getTrigger().doubleValue());
-            alerts.add(new Pair<>(mess, t.getCustomer().getChatID()));
+            alerts.add(new Pair<>(t, mess));
             subscrAndAlerts[1].release(1);
         }
     }

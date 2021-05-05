@@ -1,27 +1,21 @@
 import com.mongodb.ConnectionString;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoDatabase;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.client.model.Updates;
-import com.mongodb.client.model.InsertOneOptions;
-import org.bson.BsonDateTime;
-import org.bson.BsonDocument;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoDatabase;
 import org.bson.BsonTimestamp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.bson.json.JsonObject;
 import org.bson.types.ObjectId;
 
-import javax.print.Doc;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.combine;
 import static com.mongodb.client.model.Updates.push;
 
@@ -45,7 +39,7 @@ public class MongoConnection {
         this.db = mongoClient.getDatabase(database);
     }
 
-    public void insertRecordWithControls(ObjectId topicID, Map<String,Number> field_val) {
+    public void insertRecordWithControls(ObjectId topicID, Map<String, Number> field_val) {
         var today = LocalDate.now();
         var now = LocalTime.now().toEpochSecond(today, ZoneOffset.of("Z"));
         Document tempDoc = new Document().append("val", field_val.get("temp")).append("time", new BsonTimestamp(now));
@@ -69,20 +63,31 @@ public class MongoConnection {
 
     }
 
-    /*public List<Topic> getTopics() {
-        var topics = db.getCollection("Topics").find();
-        List<Object> values = new LinkedList<>();
-        List<Topic> topicList = new LinkedList<>();
-        topics.forEach(topicDoc -> {
-            topicDoc.forEach((f, v) -> {
-                values.add(v);
+
+    public void insertAlertWithTimeControl(Topic t, String message) {
+        int offsetMin = 1;
+        var alerts = db.getCollection("Alerts");
+        var filter = new Document("topicID", new Document("$eq", t.getTopicID()));
+        if (alerts.countDocuments(filter) == 0) {
+            Document messArray = new Document().append("text", message).append("dateTime", LocalDateTime.now());
+            Document d = new Document()
+                    .append("topicID", t.getTopicID())
+                    .append("message", Collections.singletonList(messArray));
+            alerts.insertOne(d);
+        } else {
+            var ris = alerts.find(filter);
+            ris.forEach(doc -> {
+                List<Document> alert = (ArrayList<Document>) doc.get("message");
+                Date la = (Date) alert.get(alert.size() - 1).get("dateTime");
+                LocalDateTime lastAlert = LocalDateTime.ofInstant(la.toInstant(), ZoneOffset.of("Z"));
+                if (lastAlert.plusMinutes(offsetMin).isBefore(LocalDateTime.now())) {
+                    Bson update = push("message", new Document().append("text", message).append("dateTime", LocalDateTime.now()));
+                    alerts.updateOne(eq("topicID", t.getTopicID()), update);
+                }
+                System.out.println();
             });
-            Customer c = getCustomerById((ObjectId) values.get(1));
-            topicList.add(new Topic((ObjectId) values.get(0), c, (String) values.get(3), (int) values.remove(4), null));
-            values.clear();
-        });
-        return topicList;
-    }*/
+        }
+    }
 
     public List<Topic> getTopics() {
         var topics = db.getCollection("Topics").find();
