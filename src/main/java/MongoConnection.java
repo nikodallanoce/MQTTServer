@@ -40,17 +40,17 @@ public class MongoConnection {
         this.db = mongoClient.getDatabase(database);
     }
 
-    public void insertRecordWithControls(ObjectId topicID, Map<String, Number> field_val) {
+    public DBOperation insertRecordWithControls(ObjectId topicID, Map<String, Number> field_val) {
         var today = LocalDate.now();
         var now = LocalTime.now().toEpochSecond(today, ZoneOffset.of("Z"));
         Document tempDoc = new Document().append("val", field_val.get("temp")).append("time", new BsonTimestamp(now));
         Document humDoc = new Document().append("val", field_val.get("hum")).append("time", new BsonTimestamp(now));
-
+        var dbOp = DBOperation.VOID;
         if (db.getCollection("Records").countDocuments(and(eq("topicID", topicID), eq("date", today))) > 0) {
             Bson update = combine(push("temp", tempDoc), push("hum", humDoc));
             db.getCollection("Records")
                     .updateOne(and(eq("topicID", topicID), eq("date", today)), update);
-
+            dbOp = DBOperation.UPDATE;
         } else {
             db.getCollection("Records").insertOne(new Document()
                     .append("topicID", topicID)
@@ -58,12 +58,10 @@ public class MongoConnection {
                     .append("temp", Collections.singletonList(tempDoc))
                     .append("hum", Collections.singletonList(humDoc)
                     ));
+            dbOp = DBOperation.INSERT;
         }
-
-        //retrived.forEach(System.out::println);
-
+        return dbOp;
     }
-
 
     public DBOperation insertAlertWithTimeControl(Topic t, String message, int offsetMin) {
         DBOperation dbOp = DBOperation.VOID;
@@ -87,7 +85,6 @@ public class MongoConnection {
                     alerts.updateOne(eq("topicID", t.getTopicID()), update);
                     dbOp = DBOperation.UPDATE;
                 }
-                System.out.println();
             }
         }
         return dbOp;
@@ -107,6 +104,7 @@ public class MongoConnection {
     }
 
     public Customer getCustomerById(ObjectId id) {
+
         Document filter = new Document("_id", new Document("$eq", id));
         var customers = db.getCollection("Customers").find(filter);
         List<Object> values = new LinkedList<>();
