@@ -111,15 +111,4 @@ public class MongoConnection {
         return new Customer((ObjectId) values.get(0), (String) values.get(1), (int) values.get(2));
     }
 
-
-    public static void main(String[] args) {
-
-        MongoConnection database = new MongoConnection("Mqttemp");
-        Document d = new Document().append("nome", "maestro");
-        //database.getCollection("Topics").insertOne(d);
-        Document filter = new Document("val", new Document("$lte", 12));
-        var r = filter.toJson();
-        //var ok = database.getCollection("Topics").find(filter);
-
-    }
 }
