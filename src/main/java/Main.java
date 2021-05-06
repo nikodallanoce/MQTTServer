@@ -8,7 +8,13 @@ public class Main {
         final String username = "server";
         final String password = "Server00";
 
-  
+        try {
+            System.out.println(System.getenv("tokenBot"));
+            System.out.println(System.getenv("mongoConnection"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         MQTTServer server = new MQTTServer("server", host, new MongoConnection("Mqttempv2"));
         server.connect(username, password);
         server.subscribe("#");
