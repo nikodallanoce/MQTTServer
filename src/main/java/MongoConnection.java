@@ -23,7 +23,7 @@ import static com.mongodb.client.model.Updates.push;
 // ...
 public class MongoConnection {
     private final ConnectionString connString = new ConnectionString(
-            "mongodb+srv://nikodallanoce:pieroangela@clustertest.zbdu9.mongodb.net/w=majority"
+            "mongodb+srv://nikodallanoce:pieroangela@clustertest.zbdu9.mongodb.net/Mqttempv2?retryWrites=true&w=majority"
     );
     MongoDatabase db;
 
