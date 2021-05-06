@@ -101,7 +101,6 @@ public class MQTTServer {
                     subscrAndAlerts[1].acquire(1);
                     Pair<Topic, String> topic_mess = alerts.remove(0);
                     DBOperation ris = db.insertAlertWithTimeControl(topic_mess.getKey(), topic_mess.getValue(), 1);
-                    System.out.println("thread alerts dopo semaforo e db" + ris);
                     if (ris != DBOperation.VOID) {
                         Customer customerToAlert = db.getCustomerById(topic_mess.getKey().getCustomer().getCustomerID());
                         sendMessageToChat(customerToAlert.getChatID(), topic_mess.getValue());
