@@ -8,7 +8,7 @@ public class Main {
         final String username = "server";
         final String password = "Server00";
 
-        sendMessageToChat();
+  
         MQTTServer server = new MQTTServer("server", host, new MongoConnection("Mqttempv2"));
         server.connect(username, password);
         server.subscribe("#");
