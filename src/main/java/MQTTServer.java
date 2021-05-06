@@ -30,7 +30,7 @@ public class MQTTServer {
         this.alerts = new LinkedList<>();
         this.subscrAndAlerts = new Semaphore[]{new Semaphore(0), new Semaphore(0)};
         this.db = db;
-        this.bot = new TelegramBot("1794376012:AAFqfMrJD-axHouu8feNxbaixDgP9i4M7LI");
+        this.bot = new TelegramBot(System.getenv("tokenBot"));
     }
 
     private Mqtt5BlockingClient createClient(String host) {
