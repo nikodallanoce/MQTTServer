@@ -117,6 +117,7 @@ public class MQTTServer {
     private void sendMessageToChat(int chatID, String message) {
         // Create your bot passing the token received from @BotFather
         SendResponse response = bot.execute(new SendMessage(chatID, message));
+        System.out.println();
     }
 
     private void threshControlQueueInsertion(Topic t, Map<String, Number> field_val, Comparator<Number> comp) {
