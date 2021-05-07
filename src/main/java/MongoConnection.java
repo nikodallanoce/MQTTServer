@@ -39,7 +39,7 @@ public class MongoConnection {
         this.db = mongoClient.getDatabase(database);
     }
 
-    public DBOperation insertRecordWithControls(ObjectId topicID, Map<String, Number> field_val){
+    public DBOperation insertRecordWithControls(ObjectId topicID, Map<String, Number> field_val) {
         var today = LocalDate.now();
         var now = LocalTime.now().toEpochSecond(today, ZoneOffset.of("Z"));
         Document tempDoc = new Document().append("val", field_val.get("temp")).append("time", new BsonTimestamp(now));
@@ -70,6 +70,7 @@ public class MongoConnection {
             Document messArray = new Document().append("text", message).append("dateTime", LocalDateTime.now());
             Document d = new Document()
                     .append("topicID", t.getTopicID())
+                    .append("alertOffset", offsetMin)
                     .append("message", Collections.singletonList(messArray));
             alerts.insertOne(d);
             dbOp = DBOperation.INSERT;
@@ -79,7 +80,7 @@ public class MongoConnection {
                 List<Document> alert = (ArrayList<Document>) doc.get("message");
                 Date la = (Date) alert.get(alert.size() - 1).get("dateTime");
                 LocalDateTime lastAlert = LocalDateTime.ofInstant(la.toInstant(), ZoneOffset.of("Z"));
-                if (lastAlert.plusMinutes(offsetMin).isBefore(LocalDateTime.now())) {
+                if (lastAlert.plusMinutes(doc.getInteger("alertOffset", 30)).isBefore(LocalDateTime.now())) {
                     Bson update = push("message", new Document().append("text", message).append("dateTime", LocalDateTime.now()));
                     alerts.updateOne(eq("topicID", t.getTopicID()), update);
                     dbOp = DBOperation.UPDATE;
