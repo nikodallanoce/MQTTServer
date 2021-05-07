@@ -4,9 +4,9 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import org.bson.BsonTimestamp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.bson.types.BSONTimestamp;
 import org.bson.types.ObjectId;
 
 import java.time.LocalDate;
@@ -42,8 +42,8 @@ public class MongoConnection {
     public DBOperation insertRecordWithControls(ObjectId topicID, Map<String, Number> field_val) {
         var today = LocalDate.now();
         var now = LocalTime.now().toEpochSecond(today, ZoneOffset.of("Z"));
-        Document tempDoc = new Document().append("val", field_val.get("temp")).append("time", new BSONTimestamp((int)now,0));
-        Document humDoc = new Document().append("val", field_val.get("hum")).append("time", new BSONTimestamp((int)now,0));
+        Document tempDoc = new Document().append("val", field_val.get("temp")).append("time", new BsonTimestamp((int)now,0));
+        Document humDoc = new Document().append("val", field_val.get("hum")).append("time", new BsonTimestamp((int)now,0));
         var dbOp = DBOperation.VOID;
         if (db.getCollection("Records").countDocuments(and(eq("topicID", topicID), eq("date", today))) > 0) {
             Bson update = combine(push("temp", tempDoc), push("hum", humDoc));
