@@ -79,7 +79,6 @@ public class MongoConnection {
                 List<Document> alert = (ArrayList<Document>) doc.get("message");
                 Date la = (Date) alert.get(alert.size() - 1).get("dateTime");
                 LocalDateTime lastAlert = LocalDateTime.ofInstant(la.toInstant(), ZoneOffset.of("Z"));
-                System.out.println("last alert: "+lastAlert+" is before: "+LocalDateTime.now());
                 if (lastAlert.plusMinutes(offsetMin).isBefore(LocalDateTime.now())) {
                     Bson update = push("message", new Document().append("text", message).append("dateTime", LocalDateTime.now()));
                     alerts.updateOne(eq("topicID", t.getTopicID()), update);
